@@ -10,3 +10,6 @@
 - Feel free to ask for any advice or participation.
 
 ## IMPORTANT: This is basically an example proyect of how to run executable files in a remote server/machine (the permissions should be granted by the Web pool running your web site).
+
+#Example Page
+![Alt text](https://user-images.githubusercontent.com/1031037/157799893-f0901e9f-9d22-4b45-b858-6e1f84b658f0.png)
