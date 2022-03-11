@@ -63,16 +63,13 @@
     {
         var environment = Environment.SelectedValue;
         PageInfo.InnerHtml = "<h2>Environment: " + environment + "</h2><br />";
-
-        //Infocorp.Framework.NotificationsDaemon.exe
-        string notificationsDaemon = "Infocorp.Framework.NotificationsDaemon.exe";
-        RunDaemonService(notificationsDaemon, "3");
-
-        //Infocorp.Framework.MessagingDaemon.exe
+        
         string messagingDaemon = "Infocorp.Framework.MessagingDaemon.exe";
         RunDaemonService(messagingDaemon, null);
 
-        //Infocorp.Framework.PushNotificationsDaemon.exe
+        string notificationsDaemon = "Infocorp.Framework.NotificationsDaemon.exe";
+        RunDaemonService(notificationsDaemon, "3");
+
         string pushNotificationsDaemon = "Infocorp.Framework.PushNotificationsDaemon.exe";
         RunDaemonService(pushNotificationsDaemon, null);
 
@@ -87,16 +84,19 @@
     {
         string daemonName = "Infocorp.Framework.NotificationsDaemon.exe";
         RunDaemonService(daemonName, "3");
+        RunDaemon_Notifications.Enabled = true;
     }
     public void Daemon_Messaging_RunIT(Object sender, EventArgs e)
     {
         string daemonName = "Infocorp.Framework.MessagingDaemon.exe";
         RunDaemonService(daemonName, null);
+        RunDaemon_Messaging.Enabled = true;
     }
     public void Daemon_PushNotifications_RunIT(Object sender, EventArgs e)
     {
         string daemonName = "Infocorp.Framework.PushNotificationsDaemon.exe";
         RunDaemonService(daemonName, null);
+        RunDaemon_PushNotifications.Enabled = true;
     }
 
     public void Clean(Object sender, EventArgs e)
@@ -178,7 +178,7 @@
 
                     <nav class="d-inline-flex mt-2 mt-md-0 ms-md-auto">
                         <asp:LinkButton CssClass="me-3 py-2 text-dark text-decoration-none" runat="server" OnClick="Clean">Clean Results</asp:LinkButton>
-                        <asp:LinkButton CssClass="py-2 text-dark text-decoration-none" runat="server" OnClick="DaemonRunit">Execute All</asp:LinkButton>
+                        <asp:LinkButton CssClass="py-2 text-dark text-decoration-none" runat="server" OnClientClick="CleanThis(this);" OnClick="DaemonRunit">Execute All</asp:LinkButton>
                     </nav>
                 </div>
                 <div class="pricing-header p-3 pb-md-4 mx-auto text-center">
