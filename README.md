@@ -8,6 +8,7 @@
 
 
 - Feel free to ask for any advice or participation.
+- Important: Change the web.config file AppKeys to match your own setup.
 
 ## IMPORTANT: This is basically an example proyect of how to run executable files in a remote server/machine (the permissions should be granted by the Web pool running your web site).
 
