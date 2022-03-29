@@ -4,6 +4,15 @@
 - Looks great thanks to Bootstrap 5
 - Easy to use
 
+## Instructions
+- Fork/Clone this repository like this:
+- CMD> MKDIR ICBT
+- CMD> CD ICBT
+- CMD> git clone https://github.com/RlyehDoom/ICBuildTools.git .
+- Now on IIS create a web site and use this folder as the physical path.
+- Run the web site using you own credentials (APP pool with credentials).
+- Done!
+
 ### Just create a web site that support ASP.NET C# (Framework 4.0 or greater) and put this files in your main directory.
 
 
