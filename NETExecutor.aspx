@@ -309,6 +309,7 @@
                     <div class="col">
                         <h3>Warning: 
                             <p class="lead text-danger">You don't have permissions to operate this page...</p>
+                            <p>Allowd Users: <b><%= ConfigurationManager.AppSettings["AllowedUsersExecutor"].ToString() %></b></p>
                         </h3>
                     </div>
                 </div>

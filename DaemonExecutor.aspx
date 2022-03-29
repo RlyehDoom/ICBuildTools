@@ -20,23 +20,24 @@
     //List of your active Deployment Environments:
     public static List<string> Environments = new List<string>() { "RBEC_QA", "RBL_SM_QA", "RBL_BVI_QA" };
     //List of Daemons (Add your Daemon here and that's it!):
-    public static List<KeyValuePair<string, string>> DaemonsExecutableList = new List<KeyValuePair<string, string>>() {
-                new KeyValuePair<string, string>("Infocorp.Framework.NotificationsDaemon.exe", "3"),
-                new KeyValuePair<string, string>("Infocorp.Framework.MessagingDaemon.exe", ""),
-                new KeyValuePair<string, string>("Infocorp.Framework.PushNotificationsDaemon.exe", ""),
-                new KeyValuePair<string, string>("Infocorp.Framework.TaskProcessingDaemon.exe", "1"),
-                new KeyValuePair<string, string>("Infocorp.Framework.TaskProcessingDaemon.exe-4", "4"),
-                new KeyValuePair<string, string>("Infocorp.Framework.BackOfficeMessageDaemon.exe", ""),
-                new KeyValuePair<string, string>("Infocorp.Framework.UserGroupsDaemon.exe", ""),
-                new KeyValuePair<string, string>("Infocorp.PersonalFinance.RegisteredUsersProcessingDaemon.exe", ""),
-                new KeyValuePair<string, string>("Infocorp.P2P.CollectsExpeditionDaemon.exe", ""),
-                new KeyValuePair<string, string>("Infocorp.P2P.PaymentExpeditionDaemon.exe", ""),
-                new KeyValuePair<string, string>("Infocorp.P2P.PaymentExpirationReminderDaemon.exe", ""),
-                new KeyValuePair<string, string>("Infocorp.P2P.PaymentProcessingDaemon.exe", ""),
-                //Republic Bank Daemons
-                new KeyValuePair<string, string>("Tailored.Framework.CreditCardDataFillDaemon.exe", ""),
-                new KeyValuePair<string, string>("Tailored.Framework.CreditCardNotificationsDaemon.exe", ""),
-                new KeyValuePair<string, string>("Tailored.Framework.DailyFilesDaemon.exe", "")
+    public static Dictionary<string, string> DaemonsExecutableList = new Dictionary<string, string>()
+    {
+        { "Infocorp.Framework.NotificationsDaemon.exe", "3" },
+        { "Infocorp.Framework.MessagingDaemon.exe", "" },
+        { "Infocorp.Framework.PushNotificationsDaemon.exe", "" },
+        { "Infocorp.Framework.TaskProcessingDaemon.exe", "1" },
+        { "Infocorp.Framework.TaskProcessingDaemon.exe-4", "4" },
+        { "Infocorp.Framework.BackOfficeMessageDaemon.exe", "" },
+        { "Infocorp.Framework.UserGroupsDaemon.exe", "" },
+        { "Infocorp.PersonalFinance.RegisteredUsersProcessingDaemon.exe", "" },
+        { "Infocorp.P2P.CollectsExpeditionDaemon.exe", "" },
+        { "Infocorp.P2P.PaymentExpeditionDaemon.exe", "" },
+        { "Infocorp.P2P.PaymentExpirationReminderDaemon.exe", "" },
+        { "Infocorp.P2P.PaymentProcessingDaemon.exe", "" },
+        //Republic Bank Daemons
+        { "Tailored.Framework.CreditCardDataFillDaemon.exe", "" },
+        { "Tailored.Framework.CreditCardNotificationsDaemon.exe", "" },
+        { "Tailored.Framework.DailyFilesDaemon.exe", "" }
     };
     #endregion
 
@@ -49,6 +50,12 @@
 
         if (!Page.IsPostBack)
         {
+            DaemonsRepeater.DataSource = DaemonsExecutableList;
+            DaemonsRepeater.DataBind();
+
+            Environment.DataSource = Environments;
+            Environment.DataBind();
+
             string allowedUsersString = ConfigurationManager.AppSettings["AllowedUsersDaemon"].ToString();
             if (!string.IsNullOrEmpty(allowedUsersString) && allowedUsersString != "*")
             {
@@ -72,14 +79,7 @@
             }
         }
     }
-    protected void Page_Init(object sender, EventArgs e)
-    {
-        DaemonsRepeater.DataSource = DaemonsExecutableList;
-        DaemonsRepeater.DataBind();
 
-        Environment.DataSource = Environments;
-        Environment.DataBind();
-    }
     public void Environment_SelectedIndexChanged(Object sender, EventArgs e)
     {
         var environment = Environment.SelectedValue;
@@ -97,7 +97,7 @@
             string baseBuildDirectoryPath = ConfigurationManager.AppSettings["BaseBuildDirectoryPath"].ToString();
             string daemonNameDirectory = ConfigurationManager.AppSettings["DaemonNameDirectoryPath"].ToString();
             string fullDaemonPath = System.IO.Path.Combine(baseBuildDirectoryPath + environment + daemonNameDirectory, daemonName);
-            param = string.IsNullOrEmpty(parameters) ? "" : string.Concat("| ", parameters);
+            param = string.IsNullOrEmpty(parameters) ? "" : string.Concat(" : ", parameters);
 
             if (!string.IsNullOrEmpty(parameters))
                 processInfo = new System.Diagnostics.ProcessStartInfo(fullDaemonPath, parameters);
@@ -108,7 +108,7 @@
             processInfo.UseShellExecute = false;
             processInfo.RedirectStandardError = true;
             processInfo.RedirectStandardOutput = true;
-            
+
             process = System.Diagnostics.Process.Start(processInfo);
             output = process.StandardOutput.ReadToEnd();
             error = process.StandardError.ReadToEnd();
@@ -121,11 +121,11 @@
             }
             string result = Regex.Replace(output, @"\r\n?|\n", "<br />");
             result = string.IsNullOrEmpty(result) ? "No Response..." : result;
-            PageInfo.InnerHtml = "<h4>Daemon =></h4><h5>[" + daemonName + "]:</h5>" + result + PageInfo.InnerHtml;
+            PageInfo.InnerHtml = "<h4>Daemon =></h4><h5>[" + daemonName + "]:</h5><h6>Parameters" + param + "</h6>" + result + PageInfo.InnerHtml;
         }
         catch (Exception ex)
         {
-            PageInfo.InnerHtml = PageInfo.InnerHtml + string.Format("Error executing...<br />Parameters:{0}<br />Error Message:{1}<br />", param, ex.Message) + "<br />";
+            PageInfo.InnerHtml = string.Format("<h4>Daemon =></h4><h5>[" + daemonName + "]:</h5>Error executing...<br />Parameters:{0}<br />Error Message:{1}<br />", param, ex.Message) + "<br />" + PageInfo.InnerHtml;
         }
     }
 
@@ -145,9 +145,9 @@
     {
         Button button = (Button)sender;
         string daemonParameter = button.CommandArgument;
-        string daemonName = button.CommandName.Replace("_", ".").Replace("-" + daemonParameter, "");
-
-        Debug.WriteLine("DaemonName: " + daemonName + " | DaemonParameter: " + daemonParameter);
+        string daemonName = button.CommandName.Replace("_", ".").Split('-')[0];
+        TextBox input = (TextBox)button.Parent.FindControl("InputParameters");
+        daemonParameter = input.Text;
 
         RunDaemonService(daemonName, daemonParameter);
     }
@@ -156,6 +156,23 @@
     {
         var environment = Environment.SelectedValue;
         PageInfo.InnerHtml = "";
+    }
+
+    private Control FindControlRecursive(Control root, string id)
+    {
+        if (root.ID == id)
+        {
+            return root;
+        }
+        foreach (Control c in root.Controls)
+        {
+            Control t = FindControlRecursive(c, id);
+            if (t != null)
+            {
+                return t;
+            }
+        }
+        return null;
     }
 </script>
 
@@ -249,7 +266,7 @@
                 </div>
             </header>
             <main>
-                <div id="allowedContent" runat="server" class="row">
+                <div id="allowedContent" runat="server">
                     <div class="row g-3">
                         <div class="col-auto">
                             <label for="Environment" class="col-sm-2 col-form-label text-nowrap">Select Environment:</label>
@@ -261,32 +278,34 @@
                         <div class="col-auto">
                         </div>
                     </div>
-                    <br />
-                    <div class="col">
-                        <asp:Repeater ID="DaemonsRepeater" runat="server">
-                            <ItemTemplate>
-                                <div class="row mb-3">
-                                    <label for="Input_<%# DataBinder.Eval((KeyValuePair<string, string>)Container.DataItem, "Key").ToString().Replace(".","_") %>" class="col-sm-6 col-form-label text-nowrap"><%# DataBinder.Eval((KeyValuePair<string, string>)Container.DataItem, "Key").ToString().Split('.')[2] %> :</label>
-                                    <div class="col-sm-4">
-                                        <input type="text" id="Input_<%# DataBinder.Eval((KeyValuePair<string, string>)Container.DataItem, "Key").ToString().Replace(".","_") %>" class="form-control" placeholder="No Parameters" value="<%# DataBinder.Eval((KeyValuePair<string, string>)Container.DataItem, "Value").ToString() %>" />
+                    <div class="row">
+                        <div class="col">
+                            <asp:Repeater ID="DaemonsRepeater" runat="server">
+                                <ItemTemplate>
+                                    <div class="row mb-3">
+                                        <label for="Input_<%# DataBinder.Eval((KeyValuePair<string, string>)Container.DataItem, "Key").ToString().Replace(".","_") %>" class="col-sm-6 col-form-label text-nowrap"><%# DataBinder.Eval((KeyValuePair<string, string>)Container.DataItem, "Key").ToString().Split('.')[2] %> :</label>
+                                        <div class="col-sm-4">
+                                            <asp:TextBox ID="InputParameters" runat="server" ClientIDMode="Predictable" Text='<%# DataBinder.Eval((KeyValuePair<string, string>)Container.DataItem, "Value").ToString() %>' placeholder="No Parameters" CssClass="form-control" CommandName='<%# DataBinder.Eval((KeyValuePair<string, string>)Container.DataItem, "Key").ToString() %>'></asp:TextBox>
+                                        </div>
+                                        <div class="col-sm-2">
+                                            <asp:Button ID="DaemonRunButton" runat="server" ClientIDMode="Predictable" CommandArgument='<%# DataBinder.Eval((KeyValuePair<string, string>)Container.DataItem, "Value") %>' CommandName='<%# DataBinder.Eval((KeyValuePair<string, string>)Container.DataItem, "Key").ToString().Replace(".","_") %>' Text="Run" CssClass="btn btn-primary" OnClientClick="CleanThis(this);" OnClick="Daemon_RunIT" />
+                                        </div>
                                     </div>
-                                    <div class="col-sm-2">
-                                        <asp:Button ID="DaemonRunButton" runat="server" CommandArgument='<%# DataBinder.Eval((KeyValuePair<string, string>)Container.DataItem, "Value") %>' CommandName='<%# DataBinder.Eval((KeyValuePair<string, string>)Container.DataItem, "Key").ToString().Replace(".","_") %>' Text="Run" CssClass="btn btn-primary" OnClientClick="CleanThis(this);" OnClick="Daemon_RunIT" />
-                                    </div>
-                                </div>
-                            </ItemTemplate>
-                        </asp:Repeater>
-                    </div>
-                    <div class="col">
-                        <h3>Results: 
-                            <p id="PageInfo" class="lead" runat="server"></p>
-                        </h3>
+                                </ItemTemplate>
+                            </asp:Repeater>
+                        </div>
+                        <div class="col">
+                            <h3>Results: 
+                                <p id="PageInfo" class="lead" runat="server"></p>
+                            </h3>
+                        </div>
                     </div>
                 </div>
                 <div id="notAllowedContent" runat="server" class="row">
                     <div class="col">
                         <h3>Warning: 
                             <p class="lead text-danger">You don't have permissions to operate this page...</p>
+                            <p>Allowed Users: <b><%= ConfigurationManager.AppSettings["AllowedUsersExecutor"].ToString() %></b></p>
                         </h3>
                     </div>
                 </div>
