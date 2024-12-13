@@ -1,4 +1,6 @@
 <%@ Page Language="C#" Async="true" AutoEventWireup="true" %>
+<%@ Import Namespace="System" %>
+<%@ Import Namespace="System.IO" %>
 <%@ Import Namespace="System.ComponentModel" %>
 <%@ Import Namespace="System.Threading.Tasks" %>
 <%@ Import Namespace="System.Diagnostics" %>
@@ -20,9 +22,14 @@
     {
         public static string WorkingDirectory {get;set;}
         public static string BuildName {get;set;}
+        public static string ProjectName {get;set;}
         public static string Environment { get; set; }
         public static bool ISAsync { get; set; }
+		public static string UserName { get; set; }
     }
+	
+	public static Logger logger {get;set;}
+	
     public string outputHTMLResponse;
 
     public void Page_Load(object sender, EventArgs e)
@@ -32,7 +39,9 @@
 
         string executeDeployment = Request.QueryString["ExecDeplo"];
         string buildName = Request.QueryString["BuildName"];
+        string projectName = Request.QueryString["ProjectName"];
         string isAsync = Request.QueryString["ISAsync"];
+		AP.UserName = HttpContext.Current.User.Identity.Name;
 
 #if DEBUG
             var workingDirectory = ConfigurationManager.AppSettings["WorkingGITDirectoryLocal"].ToString();
@@ -42,6 +51,7 @@
 
         AP.WorkingDirectory = workingDirectory;
         AP.BuildName = buildName;
+        AP.ProjectName = projectName;
         if (!string.IsNullOrEmpty(isAsync))
             AP.ISAsync = Convert.ToBoolean(isAsync);
         else
@@ -49,10 +59,12 @@
 
         if (!Page.IsPostBack)
         {
+			logger = new Logger();
+			
             string allowedUsersString = ConfigurationManager.AppSettings["AllowedUsersExecutor"].ToString();
             if (!string.IsNullOrEmpty(allowedUsersString) && allowedUsersString != "*")
             {
-                string userName = System.Security.Principal.WindowsIdentity.GetCurrent().Name.ToString().Split('\\')[1].ToLower();
+                string userName = AP.UserName.ToString().Split('\\')[1].ToLower();
                 AllowedUsers = allowedUsersString.ToLower().Split(',');
                 if (AllowedUsers.Where(p => p.Contains(userName)).Count() > 0)
                 {
@@ -81,7 +93,7 @@
         {
             if (AP.ISAsync == false)
             {
-                ExeInfo.InnerHtml = RunCMD(AP.WorkingDirectory, "gulp startDeployment --buildName " + AP.BuildName);
+                ExeInfo.InnerHtml = RunCMD(AP.WorkingDirectory, "gulp startDeployment --buildName " + AP.BuildName + " --projectName " + AP.ProjectName);
             }
             else
             {
@@ -93,7 +105,7 @@
     [WebMethod, ScriptMethod(ResponseFormat = ResponseFormat.Json, UseHttpGet = false)]
     public static string GetRunCMDReponse()
     {
-        return RunCMD(AP.WorkingDirectory, "gulp startDeployment --buildName " + AP.BuildName);
+        return RunCMD(AP.WorkingDirectory, "gulp startDeployment --buildName " + AP.BuildName + " --projectName " + AP.ProjectName);
     }
 
     public void ExecuteCommand(Object sender, EventArgs e)
@@ -134,6 +146,7 @@
         var error = string.Empty;
         try
         {
+			logger.WriteLog(string.Format("UserName: {0} | Executed: {1}", AP.UserName, commandToRun));
             started = process.Start();
             if (!started)
             {
@@ -142,13 +155,14 @@
             process.StandardInput.WriteLine(commandToRun + " & exit");
             output = process.StandardOutput.ReadToEnd();
             error = process.StandardError.ReadToEnd();
-            process.WaitForExit(300000 * 3); //15 Minutes....increase if you taks take longer to complete!
+            process.WaitForExit(7200000); //120 Minutes....increase if you taks take longer to complete!
             if (process.ExitCode != 0 || error.Contains("ERR!") || error.Contains("Error") || error.Contains("error"))
             {
-                responseConsoleOutput = responseConsoleOutput + string.Format("Error executing...<br />CommandToRun:{0}<br />ExitCode:{1} Error Message:{2}<br />", commandToRun, process.ExitCode, error) + "<br />";
+                responseConsoleOutput = responseConsoleOutput + string.Format("<br />Error executing...<br />CommandToRun:{0}<br />ExitCode:{1} Error Message:{2}<br />", commandToRun, process.ExitCode, error) + "<br />";
             }
+            
             string result = Regex.Replace(output, @"\r\n?|\n", "<br />");
-            responseConsoleOutput = responseConsoleOutput + (string.IsNullOrEmpty(result) ? "No Response..." : result);
+            responseConsoleOutput = (string.IsNullOrEmpty(result) ? "No Response..." : result + responseConsoleOutput);
         }
         catch (Exception ex)
         {
@@ -166,6 +180,54 @@
         string path = uri.GetLeftPart(UriPartial.Path);
         Page.Response.Redirect(path, true);
     }
+	
+	public class Logger
+	{
+		private readonly string logFilePath;
+
+		// Constructor: Inicializa el path del archivo de log
+		public Logger(string logFileName = "application.log")
+		{
+			// Ruta predeterminada: Carpeta "Logs" dentro del directorio de la aplicación
+			string logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
+
+			// Crear la carpeta "Logs" si no existe
+			if (!Directory.Exists(logDirectory))
+			{
+				Directory.CreateDirectory(logDirectory);
+			}
+
+			// Establecer la ruta completa del archivo de log
+			logFilePath = Path.Combine(logDirectory, logFileName);
+
+			// Crear el archivo si no existe
+			if (!File.Exists(logFilePath))
+			{
+				File.Create(logFilePath).Dispose();
+			}
+		}
+
+		// Método para agregar mensajes al archivo de log
+		public void WriteLog(string message, string logLevel = "INFO")
+		{
+			try
+			{
+				// Formato del mensaje: [Fecha y hora] [Nivel de log] Mensaje
+				string logEntry = string.Format("[{0:yyyy-MM-dd HH:mm:ss}] [{1}] {2}", DateTime.Now, logLevel, message);
+
+				// Escribir el mensaje en el archivo de log
+				using (StreamWriter writer = new StreamWriter(logFilePath, true))
+				{
+					writer.WriteLine(logEntry);
+				}
+			}
+			catch (Exception ex)
+			{
+				// Manejo de errores al escribir en el log (opcional: puedes implementar un log secundario)
+				Console.WriteLine(string.Format("Error escribiendo en el log: {0}", ex.Message));
+			}
+		}
+	}
 </script>
 
 <!DOCTYPE html>
@@ -276,7 +338,7 @@
                             <path fill-rule="evenodd" clip-rule="evenodd" d="M24.509 0c-6.733 0-11.715 5.893-11.492 12.284.214 6.14-.064 14.092-2.066 20.577C8.943 39.365 5.547 43.485 0 44.014v5.972c5.547.529 8.943 4.649 10.951 11.153 2.002 6.485 2.28 14.437 2.066 20.577C12.794 88.106 17.776 94 24.51 94H93.5c6.733 0 11.714-5.893 11.491-12.284-.214-6.14.064-14.092 2.066-20.577 2.009-6.504 5.396-10.624 10.943-11.153v-5.972c-5.547-.529-8.934-4.649-10.943-11.153-2.002-6.484-2.28-14.437-2.066-20.577C105.214 5.894 100.233 0 93.5 0H24.508zM80 57.863C80 66.663 73.436 72 62.543 72H44a2 2 0 01-2-2V24a2 2 0 012-2h18.437c9.083 0 15.044 4.92 15.044 12.474 0 5.302-4.01 10.049-9.119 10.88v.277C75.317 46.394 80 51.21 80 57.863zM60.521 28.34H49.948v14.934h8.905c6.884 0 10.68-2.772 10.68-7.727 0-4.643-3.264-7.207-9.012-7.207zM49.948 49.2v16.458H60.91c7.167 0 10.964-2.876 10.964-8.281 0-5.406-3.903-8.178-11.425-8.178H49.948z" fill="currentColor"></path></svg>
                         <span class="fs-4">.NET's Executor</span>
                     </a>
-
+					<p class="d-inline-flex align-items-center text-dark text-decoration-none" style="margin-bottom:0px; margin-left:5px; margin-top:5px;"> | User: <%=AP.UserName %></p>
                     <nav class="d-inline-flex mt-2 mt-md-0 ms-md-auto">
                         <asp:LinkButton ID="CleanButton" ClientIDMode="Static" CssClass="me-3 py-2 text-dark text-decoration-none" runat="server" OnClick="Clean">Reset</asp:LinkButton>
                     </nav>
